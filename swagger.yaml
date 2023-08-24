@@ -21,15 +21,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  player:
-                    type: string
-                    description: The players username.
-                  score:
-                    type: integer
-                    description: The players score.
-                  game:
-                    type: string
-                    description: The game which the score was earned for.
+                  leaderboards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Leaderboard'
+                
   /leaderboard/{gameId}:
     get:
       summary: Returns top scorers for a particular game and no specification on timeframe.
@@ -43,15 +39,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  player:
-                    type: string
-                    description: The players username.
-                  score:
-                    type: integer
-                    description: The players score.
-                  game:
-                    type: string
-                    description: The game which the score was earned for.
+                  leaderboards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Leaderboard'
   /leaderboard/{gameId}/{dateRange}:
     get:
       summary: Returns top scorers for a particular game between a date range.
@@ -65,15 +56,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  player:
-                    type: string
-                    description: The players username.
-                  score:
-                    type: integer
-                    description: The players score.
-                  game:
-                    type: string
-                    description: The game which the score was earned for.
+                  leaderboards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Leaderboard'
   /achievements:
     post:
       summary: Accepts an achievement in the form of a JSON object, and saves it to the database.
@@ -82,7 +68,7 @@ paths:
           description: An error occurred during processing.
         '201':    # status code
           description: Achievements were created
-  /achievements/{achievementId}:
+  /achievements/{startDate}/{endDate}:
     get:
       summary: Returns a breakdown of an achievement and highlights various data points around it.
       description: Breakdown that highlights data points about achievements from a few different categories; frequency, first occurrence, last occurrence, number of times earned by players.
@@ -96,23 +82,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  achievement-code:
-                    type: string
-                    description: The code for the achievement.
-                  frequency:
-                    type: integer
-                    description: The number of times the achievement occurred.
-                  first-occurrence:
-                    type: string
-                    format: date-time
-                    description: The fitst date when the achievement occurred.
-                  last-occurrence:
-                    type: string
-                    format: date-time
-                    description: The last date when the achievement occurred.
-  /achievements/{achievementId}/{date}:
+                  achievement_breakdown:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AchievementBreakdown'
+  /achievements/{achievementId}/{startDate}/{endDate}:
     get:
-      summary: Returns the number of times a particular achievement has been earned on a specific day.
+      summary: Returns the number of times a particular achievement has been earned for each day within the specified range.
       responses:
         '500':    # status code
           description: An error occurred during processing.
@@ -121,8 +97,16 @@ paths:
           content:
             application/json:
               schema: 
-                type: integer
-  /achievements/{gameId}/{dateRange}:
+                type: object
+                properties:
+                  achievement:
+                    type: string
+                    description: The code for the achievement.
+                  occurrences:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DateFrequency'
+  /achievements/game/{gameId}/{startDate}/{endDate}:
     get:
       summary: Returns a list of the different achievements earned by players in a game over a specific date range.
       responses:
@@ -135,22 +119,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  achievements:
-                    type: object
-                    properties:
-                      achievement-dt:
-                        type: string
-                        format: date-time
-                        description: Date/Time the achievement was earned.
-                      player:
-                        type: string
-                        description: The players username.
-                      game:
-                        type: string
-                        description: The game which the achievement was earned for.
-                      achievement-code:
-                        type: string
-                        description: The code for the achievement.
+                  game:
+                    type: string
+                    description: The game the metrics are being calculated for.
+                  occurrences:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AchievementFrequency'
   /players:
     post:
       summary: Accepts a list of player information and stores it into the database.
@@ -165,7 +140,7 @@ paths:
       summary: Returns a chronological list of every achievement ever earned by a player.
       description: Returns evrey achievement ever earned by a player in the order they achieved them. Also accepts an optional query parameter of a gameId to filter the results.
       parameters:
-        - name: gameId
+        - name: game
           in: query
           required: false
           description: Optional parameter to further filter on a secific game
@@ -182,21 +157,9 @@ paths:
                 type: object
                 properties:
                   achievements:
-                    type: object
-                    properties:
-                      achievement-dt:
-                        type: string
-                        format: date-time
-                        description: Date/Time the achievement was earned.
-                      player:
-                        type: string
-                        description: The players username.
-                      game:
-                        type: string
-                        description: The game which the achievement was earned for.
-                      achievement-code:
-                        type: string
-                        description: The code for the achievement.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Achievement'
   /players/{username}/{achievementId}:
     get:
       summary: Returns a date that the player earned a particular achievement.
@@ -209,4 +172,92 @@ paths:
             application/json:
               schema: 
                 type: string
-                format: date
+                format: date-time
+
+components:
+  schemas:
+    Leaderboard:
+      type: object
+      properties:
+        game:
+          type: string
+          description: The game for the particular leaderboard which highscores are being displayed for.
+        timeframe:
+          type: object
+          description: A date range indicating the scope for which the leaderboard statistics were calculated.
+          properties:
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+        topScorers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopScore'
+    TopScore:
+      type: object
+      description: An object representing one of the top scores for a game
+      properties:
+        player:
+          type: string
+          description: The username of the player
+        score:
+          type: integer
+          description: Score the player has earned for a game
+    DateFrequency:
+      type: object
+      description: An object representing a date, and the number of times an achieved occurred that day.
+      properties:
+        date:
+          type: string
+          format: date
+        frequency:
+          type: integer
+    AchievementFrequency:
+      type: object
+      description: An object representing a date, and the number of times an achieved occurred that day.
+      properties:
+        achievement_code:
+          type: string
+          description: The achievement code
+        frequency:
+          type: integer
+    AchievementBreakdown:
+      type: object
+      description: A breakdown of different matrics about achievements within a specified date range.
+      properties:
+        achievement_code:
+          type: string
+          description: The achievement code
+        first_occurrence:
+          type: string
+          format: date
+          description: The date which the first time the achievement occurred.
+        last_occurrence:
+          type: string
+          format: date
+          description: The the most recent occu of the achievement.
+        frequency:
+          type: integer
+          description: The number of times the achievement occurred.
+        player_count:
+          type: integer
+          description: The number of unique players who earned the achievement.
+    Achievement:
+      type: object
+      description: A JSON object representing an achievement earned by a player.
+      properties:
+        achievement_dt:
+          type: string
+          format: date-time
+        player:
+          type: string
+          description: The player who earned the achievement.
+        game:
+          type: string
+          description: The game which the achievement was earned on.
+        achievement_code:
+          type: string
+          description: The achievement code.
